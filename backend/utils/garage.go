@@ -6,92 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"khairul169/garage-webui/schema"
-	"log"
 	"net/http"
 	"os"
-	"strings"
-
-	"github.com/pelletier/go-toml/v2"
 )
-
-type garage struct {
-	Config schema.Config
-}
-
-var Garage = &garage{}
-
-func (g *garage) LoadConfig() error {
-	path := GetEnv("CONFIG_PATH", "/etc/garage.toml")
-	data, err := os.ReadFile(path)
-
-	if err != nil {
-		return err
-	}
-
-	var cfg schema.Config
-	err = toml.Unmarshal(data, &cfg)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	g.Config = cfg
-
-	return nil
-}
-
-func (g *garage) GetAdminEndpoint() string {
-	endpoint := os.Getenv("API_BASE_URL")
-	if len(endpoint) > 0 {
-		return endpoint
-	}
-
-	host := strings.Split(g.Config.RPCPublicAddr, ":")[0]
-	port := LastString(strings.Split(g.Config.Admin.APIBindAddr, ":"))
-
-	endpoint = fmt.Sprintf("%s:%s", host, port)
-	if !strings.HasPrefix(endpoint, "http") {
-		endpoint = fmt.Sprintf("http://%s", endpoint)
-	}
-
-	return endpoint
-}
-
-func (g *garage) GetS3Endpoint() string {
-	endpoint := os.Getenv("S3_ENDPOINT_URL")
-	if len(endpoint) > 0 {
-		return endpoint
-	}
-
-	host := strings.Split(g.Config.RPCPublicAddr, ":")[0]
-	port := LastString(strings.Split(g.Config.S3API.APIBindAddr, ":"))
-
-	endpoint = fmt.Sprintf("%s:%s", host, port)
-	if !strings.HasPrefix(endpoint, "http") {
-		endpoint = fmt.Sprintf("http://%s", endpoint)
-	}
-
-	return endpoint
-}
-
-func (g *garage) GetS3Region() string {
-	endpoint := os.Getenv("S3_REGION")
-	if len(endpoint) > 0 {
-		return endpoint
-	}
-	if len(g.Config.S3API.S3Region) == 0 {
-		return "garage"
-	}
-	return g.Config.S3API.S3Region
-}
-
-func (g *garage) GetAdminKey() string {
-	key := os.Getenv("API_ADMIN_KEY")
-	if len(key) > 0 {
-		return key
-	}
-	return g.Config.Admin.AdminToken
-}
 
 type FetchOptions struct {
 	Method  string
@@ -100,9 +17,39 @@ type FetchOptions struct {
 	Headers map[string]string
 }
 
-func (g *garage) Fetch(url string, options *FetchOptions) ([]byte, error) {
+type GarageConfig struct {
+	AdminEndpoint string
+	S3Endpoint    string
+	S3Region      string
+	AdminKey      string
+}
+
+var Garage = GarageConfig{}
+
+func init() {
+
+	Garage.AdminEndpoint = requiredEnv("API_BASE_URL")
+	Garage.S3Endpoint = requiredEnv("S3_ENDPOINT_URL")
+	Garage.S3Region = requiredEnv("S3_REGION")
+	Garage.AdminKey = requiredEnv("API_ADMIN_KEY")
+
+}
+
+func requiredEnv(name string) string {
+
+	v := os.Getenv(name)
+
+	if len(v) == 0 {
+
+		panic(fmt.Sprintf("Missing %s env variable!", name))
+	}
+
+	return v
+}
+
+func (g GarageConfig) Fetch(url string, options *FetchOptions) ([]byte, error) {
 	var reqBody io.Reader
-	reqUrl := fmt.Sprintf("%s%s", g.GetAdminEndpoint(), url)
+	reqUrl := fmt.Sprintf("%s%s", g.AdminEndpoint, url)
 	method := http.MethodGet
 
 	if len(options.Method) > 0 {
@@ -131,7 +78,7 @@ func (g *garage) Fetch(url string, options *FetchOptions) ([]byte, error) {
 	}
 
 	// Add auth token
-	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", g.GetAdminKey()))
+	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", g.AdminKey))
 
 	if options.Headers != nil {
 		for k, v := range options.Headers {

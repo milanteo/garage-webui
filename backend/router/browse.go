@@ -33,7 +33,7 @@ func (b *Browse) GetObjects(w http.ResponseWriter, r *http.Request) {
 		limit = 100
 	}
 
-	client, err := getS3Client(bucket)
+	client, err := getS3Client(bucket, nil)
 	if err != nil {
 		utils.ResponseError(w, err)
 		return
@@ -88,7 +88,7 @@ func (b *Browse) GetOneObject(w http.ResponseWriter, r *http.Request) {
 	thumbnail := queryParams.Get("thumb") == "1"
 	download := queryParams.Get("dl") == "1"
 
-	client, err := getS3Client(bucket)
+	client, err := getS3Client(bucket, nil)
 	if err != nil {
 		utils.ResponseError(w, err)
 		return
@@ -184,7 +184,7 @@ func (b *Browse) PutObject(w http.ResponseWriter, r *http.Request) {
 		defer file.Close()
 	}
 
-	client, err := getS3Client(bucket)
+	client, err := getS3Client(bucket, nil)
 	if err != nil {
 		utils.ResponseError(w, err)
 		return
@@ -220,7 +220,7 @@ func (b *Browse) DeleteObject(w http.ResponseWriter, r *http.Request) {
 	recursive := r.URL.Query().Get("recursive") == "true"
 	isDirectory := strings.HasSuffix(key, "/")
 
-	client, err := getS3Client(bucket)
+	client, err := getS3Client(bucket, nil)
 	if err != nil {
 		utils.ResponseError(w, err)
 		return
@@ -284,10 +284,15 @@ func (b *Browse) DeleteObject(w http.ResponseWriter, r *http.Request) {
 	utils.ResponseSuccess(w, res)
 }
 
-func getBucketCredentials(bucket string) (aws.CredentialsProvider, error) {
+func getBucketCredentials(bucket string, permission *string) (aws.CredentialsProvider, error) {
 	cacheKey := fmt.Sprintf("key:%s", bucket)
-	cacheData := utils.Cache.Get(cacheKey)
 
+	// Some CORS operations with the SDK are only achievable using a "owner" access key
+	if permission != nil {
+		cacheKey = fmt.Sprintf("key:%s:%s", *permission, bucket)
+	}
+
+	cacheData := utils.Cache.Get(cacheKey)
 	if cacheData != nil {
 		return cacheData.(aws.CredentialsProvider), nil
 	}
@@ -305,7 +310,10 @@ func getBucketCredentials(bucket string) (aws.CredentialsProvider, error) {
 	var key schema.KeyElement
 
 	for _, k := range bucketData.Keys {
-		if !k.Permissions.Read || !k.Permissions.Write {
+		if permission == nil && (!k.Permissions.Read || !k.Permissions.Write){
+			continue
+		} 
+		if permission != nil && !k.Permissions.HasPermission(*permission) {
 			continue
 		}
 
@@ -319,26 +327,30 @@ func getBucketCredentials(bucket string) (aws.CredentialsProvider, error) {
 		break
 	}
 
+	if key.AccessKeyID == "" {
+		return nil, fmt.Errorf("a valid access key was not found for this bucket")
+	}
+
 	credential := credentials.NewStaticCredentialsProvider(key.AccessKeyID, key.SecretAccessKey, "")
 	utils.Cache.Set(cacheKey, credential, time.Hour)
 
 	return credential, nil
 }
 
-func getS3Client(bucket string) (*s3.Client, error) {
-	creds, err := getBucketCredentials(bucket)
+func getS3Client(bucket string, permission *string) (*s3.Client, error) {
+	creds, err := getBucketCredentials(bucket, permission)
 	if err != nil {
 		return nil, fmt.Errorf("cannot get credentials for bucket %s: %w", bucket, err)
 	}
 
 	// Determine endpoint and whether to disable HTTPS
-	endpoint := utils.Garage.GetS3Endpoint()
+	endpoint := utils.Garage.S3Endpoint
 	disableHTTPS := !strings.HasPrefix(endpoint, "https://")
 
 	// AWS config without BaseEndpoint
 	awsConfig := aws.Config{
 		Credentials: creds,
-		Region:      utils.Garage.GetS3Region(),
+		Region:      utils.Garage.S3Region,
 	}
 
 	// Build S3 client with custom endpoint resolver for proper signing
@@ -348,7 +360,7 @@ func getS3Client(bucket string) (*s3.Client, error) {
 		o.EndpointResolver = s3.EndpointResolverFunc(func(region string, opts s3.EndpointResolverOptions) (aws.Endpoint, error) {
 			return aws.Endpoint{
 				URL:           endpoint,
-				SigningRegion: utils.Garage.GetS3Region(),
+				SigningRegion: utils.Garage.S3Region,
 			}, nil
 		})
 	})

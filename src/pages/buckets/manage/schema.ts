@@ -37,3 +37,16 @@ export const allowKeysSchema = z.object({
 });
 
 export type AllowKeysSchema = z.infer<typeof allowKeysSchema>;
+
+export const bucketCorsSchema = z.object({
+  bucketName: z.string(),
+  rule: z.object({
+    allowedMethods: z.array(z.string()).nullable(),
+    allowedOrigins: z.array(z.string()).nullable(),
+    allowedHeaders: z.array(z.string()).nullable(),
+    exposeHeaders: z.array(z.string()).nullable(),
+    maxAgeSeconds: z.coerce.number().nullable(),
+  })
+});
+
+export type BucketCorsSchema = z.infer<typeof bucketCorsSchema>;

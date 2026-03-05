@@ -18,10 +18,6 @@ func main() {
 	utils.InitCacheManager()
 	sessionMgr := utils.InitSessionManager()
 
-	if err := utils.Garage.LoadConfig(); err != nil {
-		log.Println("Cannot load garage config!", err)
-	}
-
 	basePath := os.Getenv("BASE_PATH")
 	mux := http.NewServeMux()
 

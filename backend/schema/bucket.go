@@ -1,5 +1,7 @@
 package schema
 
+import "github.com/aws/aws-sdk-go-v2/service/s3/types"
+
 type GetBucketsRes struct {
 	ID            string       `json:"id"`
 	GlobalAliases []string     `json:"globalAliases"`
@@ -22,6 +24,37 @@ type Bucket struct {
 	UnfinishedMultipartUploadBytes int64         `json:"unfinishedMultipartUploadBytes"`
 	Quotas                         Quotas        `json:"quotas"`
 	Created                        string        `json:"created"`
+}
+
+type BucketCors struct {
+	AllowedOrigins []string `json:"allowedOrigins"`
+	AllowedMethods []string `json:"allowedMethods"`
+	AllowedHeaders []string `json:"allowedHeaders"`
+	ExposeHeaders  []string `json:"exposeHeaders"`
+	MaxAgeSeconds  *int32   `json:"maxAgeSeconds"`
+}
+
+func (bc *BucketCors) ToType() types.CORSRule {
+
+	return types.CORSRule{
+		AllowedOrigins: bc.AllowedOrigins,
+		AllowedMethods: bc.AllowedMethods,
+		AllowedHeaders: bc.AllowedHeaders,
+		ExposeHeaders:  bc.ExposeHeaders,
+		MaxAgeSeconds:  bc.MaxAgeSeconds,
+	}
+}
+
+func (bc *BucketCors) Merge(rs []types.CORSRule) {
+
+	for _, r := range rs {
+
+		bc.AllowedOrigins = append(bc.AllowedOrigins, r.AllowedOrigins...)
+		bc.AllowedMethods = append(bc.AllowedMethods, r.AllowedMethods...)
+		bc.AllowedHeaders = append(bc.AllowedHeaders, r.AllowedHeaders...)
+		bc.ExposeHeaders = append(bc.ExposeHeaders, r.ExposeHeaders...)
+		bc.MaxAgeSeconds = r.MaxAgeSeconds
+	}
 }
 
 type LocalAlias struct {
@@ -51,4 +84,17 @@ type Quotas struct {
 type WebsiteConfig struct {
 	IndexDocument string `json:"indexDocument"`
 	ErrorDocument string `json:"errorDocument"`
+}
+
+func (p *Permissions) HasPermission(perm string) bool {
+	switch perm {
+	case "read":
+		return p.Read
+	case "write":
+		return p.Write
+	case "owner":
+		return p.Owner
+	default:
+		return false
+	}
 }
