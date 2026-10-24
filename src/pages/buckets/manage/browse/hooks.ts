@@ -16,8 +16,14 @@ export const useBrowseObjects = (
 ) => {
   return useQuery({
     queryKey: ["browse", bucket, options],
-    queryFn: () =>
-      api.get<GetObjectsResult>(`/browse/${bucket}`, { params: options }),
+    queryFn: () => {
+      const params: UseBrowserObjectOptions = { ...options };
+      if (!params.next) {
+        delete params.next;
+      }
+
+      return api.get<GetObjectsResult>(`/browse/${bucket}`, { params });
+    },
   });
 };
 

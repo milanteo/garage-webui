@@ -7,6 +7,7 @@ import (
 	"khairul169/garage-webui/schema"
 	"khairul169/garage-webui/utils"
 	"net/http"
+	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -73,6 +74,18 @@ func (b *Buckets) GetCors(w http.ResponseWriter, r *http.Request) {
 	})
 
 	if err != nil {
+		// Treat a missing CORS configuration as an empty one
+		if strings.Contains(err.Error(), "StatusCode: 404") {
+			utils.ResponseSuccess(w, schema.BucketCors{
+				AllowedOrigins: []string{},
+				AllowedMethods: []string{},
+				AllowedHeaders: []string{},
+				ExposeHeaders:  []string{},
+				MaxAgeSeconds:  nil,
+			})
+			return
+		}
+
 		utils.ResponseError(w, err)
 		return
 	}
@@ -103,7 +116,9 @@ func (b *Buckets) PutCors(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	client, err := getS3Client(bucket, nil)
+	// Garage requires the "owner" permission for PutBucketCors operations
+	permission := "owner"
+	client, err := getS3Client(bucket, &permission)
 
 	if err != nil {
 		utils.ResponseError(w, err)

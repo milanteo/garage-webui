@@ -1,5 +1,6 @@
 export type UseBrowserObjectOptions = Partial<{
   prefix: string;
+  search: string;
   limit: number;
   next: string;
 }>;

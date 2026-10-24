@@ -26,6 +26,10 @@ func (b *Browse) GetObjects(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	bucket := r.PathValue("bucket")
 	prefix := query.Get("prefix")
+	// Search is limited to the current folder: removing "/" prevents it from
+	// matching nested object keys.
+	search := strings.ReplaceAll(strings.TrimSpace(query.Get("search")), "/", "")
+	listPrefix := prefix + search
 	continuationToken := query.Get("next")
 
 	limit, err := strconv.Atoi(query.Get("limit"))
@@ -41,7 +45,7 @@ func (b *Browse) GetObjects(w http.ResponseWriter, r *http.Request) {
 
 	objects, err := client.ListObjectsV2(context.Background(), &s3.ListObjectsV2Input{
 		Bucket:            aws.String(bucket),
-		Prefix:            aws.String(prefix),
+		Prefix:            aws.String(listPrefix),
 		Delimiter:         aws.String("/"),
 		MaxKeys:           aws.Int32(int32(limit)),
 		ContinuationToken: aws.String(continuationToken),
@@ -64,6 +68,8 @@ func (b *Browse) GetObjects(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for _, object := range objects.Contents {
+		// Strip only the current folder prefix, not the search term, so object
+		// names stay relative to the folder for display and actions.
 		key := strings.TrimPrefix(*object.Key, prefix)
 		if key == "" {
 			continue
@@ -310,9 +316,9 @@ func getBucketCredentials(bucket string, permission *string) (aws.CredentialsPro
 	var key schema.KeyElement
 
 	for _, k := range bucketData.Keys {
-		if permission == nil && (!k.Permissions.Read || !k.Permissions.Write){
+		if permission == nil && (!k.Permissions.Read || !k.Permissions.Write) {
 			continue
-		} 
+		}
 		if permission != nil && !k.Permissions.HasPermission(*permission) {
 			continue
 		}

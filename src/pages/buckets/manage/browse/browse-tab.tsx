@@ -60,6 +60,7 @@ const BrowseTab = () => {
         />
 
         <ObjectList
+          key={prefixHistory[curPrefix] || ""}
           prefix={prefixHistory[curPrefix] || ""}
           onPrefixChange={gotoPrefix}
         />

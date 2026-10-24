@@ -10,10 +10,18 @@ import {
   FileIcon,
   FileType,
   Folder,
+  Search,
+  X,
 } from "lucide-react";
 import { useBucketContext } from "../context";
 import ObjectActions from "./object-actions";
 import GotoTopButton from "@/components/ui/goto-top-btn";
+import Input from "@/components/ui/input";
+import { useRef, useState } from "react";
+import ObjectListPagination from "./object-list-pagination";
+import { useDebounce } from "@/hooks/useDebounce";
+
+const PAGE_SIZE = 100;
 
 type Props = {
   prefix?: string;
@@ -22,18 +30,88 @@ type Props = {
 
 const ObjectList = ({ prefix, onPrefixChange }: Props) => {
   const { bucketName } = useBucketContext();
-  const { data, error, isLoading } = useBrowseObjects(bucketName, {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [search, setSearch] = useState("");
+  const [query, setQuery] = useState("");
+  const [page, setPage] = useState(0);
+  const [tokens, setTokens] = useState<Array<string | undefined>>([undefined]);
+
+  const applySearch = useDebounce((value: string) => {
+    setQuery(value);
+    setPage(0);
+    setTokens([undefined]);
+  }, 300);
+
+  const onSearchChange = (value: string) => {
+    const sanitized = value.replace(/\//g, "");
+    setSearch(sanitized);
+    applySearch(sanitized.trim());
+  };
+
+  const { data, error, isLoading, isFetching } = useBrowseObjects(bucketName, {
     prefix,
-    limit: 1000,
+    search: query,
+    next: tokens[page],
+    limit: PAGE_SIZE,
   });
+
+  const scrollToListTop = () => {
+    containerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const onPrevPage = () => {
+    if (page === 0) return;
+    setPage((current) => Math.max(0, current - 1));
+    scrollToListTop();
+  };
+
+  const onNextPage = () => {
+    if (!data?.nextToken || isFetching) return;
+
+    const nextToken = data.nextToken;
+    setTokens((current) => {
+      const next = current.slice(0, page + 1);
+      next[page + 1] = nextToken;
+      return next;
+    });
+    setPage((current) => current + 1);
+    scrollToListTop();
+  };
 
   const onObjectClick = (object: Object) => {
     window.open(API_URL + object.url + "?view=1", "_blank");
   };
 
   return (
-    <div className="overflow-x-auto min-h-[400px]">
-      <Table>
+    <div className="min-h-[400px]" ref={containerRef}>
+      <div className="flex flex-row justify-end px-2 pb-2">
+        <div className="relative w-full sm:w-72">
+          <Search
+            size={16}
+            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-base-content/50"
+          />
+          <Input
+            className="w-full pl-9 pr-9"
+            placeholder="Search in this folder..."
+            aria-label="Search objects by name"
+            value={search}
+            onChange={(e) => onSearchChange(e.target.value)}
+          />
+          {search && (
+            <button
+              type="button"
+              aria-label="Clear search"
+              className="btn btn-ghost btn-circle btn-xs absolute right-2 top-1/2 -translate-y-1/2"
+              onClick={() => onSearchChange("")}
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div className="overflow-x-auto">
+        <Table>
         <Table.Head>
           <span>Name</span>
           <span>Size</span>
@@ -60,7 +138,7 @@ const ObjectList = ({ prefix, onPrefixChange }: Props) => {
           ) : !data?.prefixes?.length && !data?.objects?.length ? (
             <tr>
               <td className="text-center py-16" colSpan={3}>
-                No objects
+                {query ? "No objects found" : "No objects"}
               </td>
             </tr>
           ) : null}
@@ -130,6 +208,15 @@ const ObjectList = ({ prefix, onPrefixChange }: Props) => {
           })}
         </Table.Body>
       </Table>
+      </div>
+
+      <ObjectListPagination
+        page={page}
+        hasNext={!!data?.nextToken}
+        disabled={isFetching}
+        onPrev={onPrevPage}
+        onNext={onNextPage}
+      />
 
       <GotoTopButton />
     </div>

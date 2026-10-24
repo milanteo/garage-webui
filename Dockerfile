@@ -4,7 +4,7 @@ WORKDIR /app
 RUN npm install -g corepack@latest && corepack use pnpm@latest
 
 COPY package.json pnpm-lock.yaml ./
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --dangerously-allow-all-builds
 
 COPY . .
 RUN pnpm run build
