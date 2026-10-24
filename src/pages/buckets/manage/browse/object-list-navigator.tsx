@@ -25,25 +25,27 @@ const ObjectListNavigator = ({
   };
 
   return (
-    <div className="flex flex-row flex-wrap items-center p-2 gap-y-2">
-      <div className="order-1 flex flex-row items-center">
+    <div className="flex shrink-0 flex-row items-center gap-2 p-2">
+      <div className="flex shrink-0 flex-row items-center">
         <Button
           icon={ChevronLeft}
           color="ghost"
+          size="sm"
+          aria-label="Back"
           disabled={curPrefix < 0}
           onClick={onGoBack}
-          className="col-span-2"
         />
         <Button
           icon={ChevronRight}
           color="ghost"
+          size="sm"
+          aria-label="Forward"
           disabled={curPrefix >= prefixHistory.length - 1}
           onClick={onGoForward}
-          className="col-span-2"
         />
       </div>
 
-      <div className="order-3 md:order-2 flex flex-row w-full overflow-x-auto items-center bg-base-200 h-10 flex-1 shrink-0 min-w-[80%] md:min-w-0 rounded-lg mx-2 px-2">
+      <div className="flex h-9 min-w-0 flex-1 flex-row items-center overflow-x-auto rounded-lg bg-base-200 px-2">
         <HistoryItem
           icon={Home}
           isActive={curPrefix === -1}
@@ -65,7 +67,7 @@ const ObjectListNavigator = ({
         ))}
       </div>
 
-      <div className="order-2 flex flex-row items-center flex-1 md:order-3 md:flex-initial justify-end">
+      <div className="flex shrink-0 flex-row items-center justify-end">
         {actions}
       </div>
     </div>

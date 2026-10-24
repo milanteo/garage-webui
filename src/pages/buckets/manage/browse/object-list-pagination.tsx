@@ -21,7 +21,7 @@ const ObjectListPagination = ({
   }
 
   return (
-    <div className="flex flex-row items-center justify-between gap-2 px-2 py-3">
+    <div className="flex shrink-0 flex-row items-center justify-between gap-2 px-2 py-3">
       <span className="text-sm text-base-content/60">Page {page + 1}</span>
 
       <div className="flex flex-row items-center gap-2">

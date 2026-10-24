@@ -50,8 +50,8 @@ const BrowseTab = () => {
   }
 
   return (
-    <div>
-      <Card className="pb-2">
+    <div className="flex h-full min-h-0 flex-col">
+      <Card className="flex min-h-0 flex-1 flex-col pb-2">
         <ObjectListNavigator
           curPrefix={curPrefix}
           setCurPrefix={setCurPrefix}

@@ -7,6 +7,10 @@
   body {
     @apply bg-base-200 overflow-hidden;
   }
+
+  body {
+    background-image: linear-gradient(rgb(0 0 0 / 3%), rgb(0 0 0 / 3%));
+  }
 }
 
 @layer utilities {
@@ -22,6 +26,10 @@
 
   .card-body {
     @apply p-4 md:p-8;
+  }
+
+  .input {
+    @apply h-9 px-3 text-sm;
   }
 
   .dropdown-content {

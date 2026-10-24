@@ -83,8 +83,8 @@ const ObjectList = ({ prefix, onPrefixChange }: Props) => {
   };
 
   return (
-    <div className="min-h-[400px]" ref={containerRef}>
-      <div className="flex flex-row justify-end px-2 pb-2">
+    <div className="flex min-h-0 flex-1 flex-col" ref={containerRef}>
+      <div className="flex shrink-0 flex-row justify-end px-2 pb-2">
         <div className="relative w-full sm:w-72">
           <Search
             size={16}
@@ -110,104 +110,107 @@ const ObjectList = ({ prefix, onPrefixChange }: Props) => {
         </div>
       </div>
 
-      <div className="overflow-x-auto">
+      <div className="min-h-0 flex-1 overflow-auto">
         <Table>
-        <Table.Head>
-          <span>Name</span>
-          <span>Size</span>
-          <span>Last Modified</span>
-        </Table.Head>
+          <Table.Head className="[&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:bg-base-100">
+            <span>Name</span>
+            <span>Size</span>
+            <span>Last Modified</span>
+            <span className="sr-only">Actions</span>
+          </Table.Head>
 
-        <Table.Body>
-          {isLoading ? (
-            <tr>
-              <td colSpan={3}>
-                <div className="h-[320px] flex items-center justify-center">
-                  <Loading />
-                </div>
-              </td>
-            </tr>
-          ) : error ? (
-            <tr>
-              <td colSpan={3}>
-                <Alert status="error" icon={<CircleXIcon />}>
-                  <span>{error.message}</span>
-                </Alert>
-              </td>
-            </tr>
-          ) : !data?.prefixes?.length && !data?.objects?.length ? (
-            <tr>
-              <td className="text-center py-16" colSpan={3}>
-                {query ? "No objects found" : "No objects"}
-              </td>
-            </tr>
-          ) : null}
+          <Table.Body>
+            {isLoading ? (
+              <tr>
+                <td colSpan={3}>
+                  <div className="h-[320px] flex items-center justify-center">
+                    <Loading />
+                  </div>
+                </td>
+              </tr>
+            ) : error ? (
+              <tr>
+                <td colSpan={3}>
+                  <Alert status="error" icon={<CircleXIcon />}>
+                    <span>{error.message}</span>
+                  </Alert>
+                </td>
+              </tr>
+            ) : !data?.prefixes?.length && !data?.objects?.length ? (
+              <tr>
+                <td className="text-center py-16" colSpan={3}>
+                  {query ? "No objects found" : "No objects"}
+                </td>
+              </tr>
+            ) : null}
 
-          {data?.prefixes.map((prefix) => (
-            <tr
-              key={prefix}
-              className="hover:bg-neutral/60 hover:text-neutral-content group"
-            >
-              <td
-                className="cursor-pointer"
-                role="button"
-                onClick={() => onPrefixChange?.(prefix)}
-              >
-                <span className="flex items-center gap-2 font-normal">
-                  <Folder size={20} className="text-primary" />
-                  {prefix
-                    .substring(0, prefix.lastIndexOf("/"))
-                    .split("/")
-                    .pop()}
-                </span>
-              </td>
-              <td colSpan={2} />
-              <ObjectActions object={{ objectKey: prefix, url: "" }} />
-            </tr>
-          ))}
-
-          {data?.objects.map((object, idx) => {
-            const extIdx = object.objectKey.lastIndexOf(".");
-            const filename =
-              extIdx >= 0
-                ? object.objectKey.substring(0, extIdx)
-                : object.objectKey;
-            const ext = extIdx >= 0 ? object.objectKey.substring(extIdx) : null;
-
-            return (
+            {data?.prefixes.map((prefix) => (
               <tr
-                key={object.objectKey}
+                key={prefix}
                 className="hover:bg-neutral/60 hover:text-neutral-content group"
               >
                 <td
                   className="cursor-pointer"
                   role="button"
-                  onClick={() => onObjectClick(object)}
+                  onClick={() => onPrefixChange?.(prefix)}
                 >
-                  <span className="flex items-center font-normal w-full">
-                    <FilePreview ext={ext?.substring(1)} object={object} />
-                    <span className="truncate max-w-[40vw]">{filename}</span>
-                    {ext && <span className="text-base-content/60">{ext}</span>}
+                  <span className="flex items-center gap-2 font-normal">
+                    <Folder size={20} className="text-primary" />
+                    {prefix
+                      .substring(0, prefix.lastIndexOf("/"))
+                      .split("/")
+                      .pop()}
                   </span>
                 </td>
-                <td className="whitespace-nowrap">
-                  {readableBytes(object.size)}
-                </td>
-                <td className="whitespace-nowrap">
-                  {dayjs(object.lastModified).fromNow()}
-                </td>
-                <ObjectActions
-                  prefix={data.prefix}
-                  object={object}
-                  end={
-                    idx >= data.objects.length - 2 && data.objects.length > 5
-                  }
-                />
+                <td colSpan={2} />
+                <ObjectActions object={{ objectKey: prefix, url: "" }} />
               </tr>
-            );
-          })}
-        </Table.Body>
-      </Table>
+            ))}
+
+            {data?.objects.map((object, idx) => {
+              const extIdx = object.objectKey.lastIndexOf(".");
+              const filename =
+                extIdx >= 0
+                  ? object.objectKey.substring(0, extIdx)
+                  : object.objectKey;
+              const ext = extIdx >= 0 ? object.objectKey.substring(extIdx) : null;
+
+              return (
+                <tr
+                  key={object.objectKey}
+                  className="hover:bg-neutral/60 hover:text-neutral-content group"
+                >
+                  <td
+                    className="cursor-pointer"
+                    role="button"
+                    onClick={() => onObjectClick(object)}
+                  >
+                    <span className="flex items-center font-normal w-full">
+                      <FilePreview ext={ext?.substring(1)} object={object} />
+                      <span className="truncate max-w-[40vw]">{filename}</span>
+                      {ext && (
+                        <span className="text-base-content/60">{ext}</span>
+                      )}
+                    </span>
+                  </td>
+                  <td className="whitespace-nowrap">
+                    {readableBytes(object.size)}
+                  </td>
+                  <td className="whitespace-nowrap">
+                    {dayjs(object.lastModified).fromNow()}
+                  </td>
+                  <ObjectActions
+                    prefix={data.prefix}
+                    object={object}
+                    end={
+                      idx >= data.objects.length - 2 && data.objects.length > 5
+                    }
+                  />
+                </tr>
+              );
+            })}
+          </Table.Body>
+        </Table>
       </div>
 
       <ObjectListPagination

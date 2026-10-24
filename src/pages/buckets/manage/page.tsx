@@ -46,7 +46,7 @@ const ManageBucketPage = () => {
   const name = data?.globalAliases[0];
 
   return (
-    <>
+    <div className="flex h-full min-h-0 flex-col">
       <Page
         title={name || "Manage Bucket"}
         prev="/buckets"
@@ -54,19 +54,19 @@ const ManageBucketPage = () => {
       />
 
       {isLoading && (
-        <div className="h-full flex items-center justify-center">
+        <div className="flex flex-1 items-center justify-center">
           <Loading size="lg" />
         </div>
       )}
 
       {error != null && (
-        <Alert status="error" icon={<CircleXIcon />}>
+        <Alert status="error" className="shrink-0" icon={<CircleXIcon />}>
           <span>{error.message}</span>
         </Alert>
       )}
 
       {data && !corsLoading && (
-        <div className="container">
+        <div className="container flex min-h-0 flex-1 flex-col">
           <BucketContext.Provider
             value={{
               bucket: data,
@@ -81,11 +81,15 @@ const ManageBucketPage = () => {
               bucketName: name || "",
             }}
           >
-            <TabView tabs={tabs} className="bg-base-100 h-14 px-1.5" />
+            <TabView
+              tabs={tabs}
+              className="bg-base-100 h-14 shrink-0 px-1.5"
+              contentClassName="mt-4 flex min-h-0 flex-1 flex-col"
+            />
           </BucketContext.Provider>
         </div>
       )}
-    </>
+    </div>
   );
 };
 
