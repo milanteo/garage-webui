@@ -82,6 +82,23 @@ const ObjectList = ({ prefix, onPrefixChange }: Props) => {
     window.open(API_URL + object.url + "?view=1", "_blank");
   };
 
+  // Size and last modified are only available for objects, not for prefixes.
+  const showFileMetadata = !data || data.objects.length > 0;
+  const columnCount = showFileMetadata ? 4 : 2;
+
+  const headCells = [
+    <span key="name">Name</span>,
+    ...(showFileMetadata
+      ? [
+          <span key="size">Size</span>,
+          <span key="last-modified">Last Modified</span>,
+        ]
+      : []),
+    <span key="actions" className="sr-only">
+      Actions
+    </span>,
+  ];
+
   return (
     <div className="flex min-h-0 flex-1 flex-col" ref={containerRef}>
       <div className="flex shrink-0 flex-row justify-end px-2 pb-2">
@@ -113,16 +130,13 @@ const ObjectList = ({ prefix, onPrefixChange }: Props) => {
       <div className="min-h-0 flex-1 overflow-auto">
         <Table>
           <Table.Head className="[&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:bg-base-100">
-            <span>Name</span>
-            <span>Size</span>
-            <span>Last Modified</span>
-            <span className="sr-only">Actions</span>
+            {headCells}
           </Table.Head>
 
           <Table.Body>
             {isLoading ? (
               <tr>
-                <td colSpan={3}>
+                <td colSpan={columnCount}>
                   <div className="h-[320px] flex items-center justify-center">
                     <Loading />
                   </div>
@@ -130,7 +144,7 @@ const ObjectList = ({ prefix, onPrefixChange }: Props) => {
               </tr>
             ) : error ? (
               <tr>
-                <td colSpan={3}>
+                <td colSpan={columnCount}>
                   <Alert status="error" icon={<CircleXIcon />}>
                     <span>{error.message}</span>
                   </Alert>
@@ -138,7 +152,7 @@ const ObjectList = ({ prefix, onPrefixChange }: Props) => {
               </tr>
             ) : !data?.prefixes?.length && !data?.objects?.length ? (
               <tr>
-                <td className="text-center py-16" colSpan={3}>
+                <td className="text-center py-16" colSpan={columnCount}>
                   {query ? "No objects found" : "No objects"}
                 </td>
               </tr>
@@ -162,7 +176,7 @@ const ObjectList = ({ prefix, onPrefixChange }: Props) => {
                       .pop()}
                   </span>
                 </td>
-                <td colSpan={2} />
+                {showFileMetadata && <td colSpan={2} />}
                 <ObjectActions object={{ objectKey: prefix, url: "" }} />
               </tr>
             ))}
